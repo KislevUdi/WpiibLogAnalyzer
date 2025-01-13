@@ -4,17 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e7b07eca-4318-4d23-a2f8-954fb079934c" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/wpilibLogAnalyzer.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/LogFileReader.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/LogReader.py" afterDir="false" />
-    </list>
+    <list default="true" id="e7b07eca-4318-4d23-a2f8-954fb079934c" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -92,6 +82,30 @@
       <option name="presentableId" value="Default" />
       <updated>1736777797332</updated>
     </task>
+    <task id="LOCAL-00001" summary="Initial Log Analyzer for simple motor">
+      <option name="closed" value="true" />
+      <created>1736802507867</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1736802507867</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Initial Log Analyzer for simple motor" />
+    <option name="LAST_COMMIT_MESSAGE" value="Initial Log Analyzer for simple motor" />
   </component>
 </project>
