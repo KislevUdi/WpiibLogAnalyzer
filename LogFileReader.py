@@ -1,3 +1,4 @@
+import math
 import struct
 import typing
 
@@ -6,6 +7,15 @@ from tkinter import filedialog
 
 import numpy
 
+
+CALCULATE_THEORETICAL_KV = False
+GEAR_RATIO = 150.0 / 7.0
+MOTOR_FREE_RPM = 6380   # use 6000 for Kraken
+MOTOR_MAX_VOLT = 12*(255/257)   # use 12*(344/366)
+CALCULATE_ACCELERATION = False
+MAX_A = 200
+MAX_CALCULATED_A_DIFF = 100
+PRINT_DATA = False
 
 class DataRecord:
     def __init__(self, entryId: int, value: float, timestamp: int):
@@ -136,6 +146,7 @@ def analyzeSelectedGroups():
         voltId = log.getEntryId(s + '/Voltage')
         analyzeData(vId, aId, voltId, s)
 
+
 def printSelectedGroups():
     selected_items = [listBox.get(i) for i in listBox.curselection()]
     items = ('/Voltage','/Velocity', '/Position', 'Acceleration')
@@ -156,28 +167,38 @@ def analyzeData(vId, aId, voltId, name):
     lastATime = 0
     lastVoltTime = 0
     prevV = 0
+    prevVTime = 0
     n = 0
     volts = list()
     dataArray = list()
+    kv = 11.85 / MOTOR_FREE_RPM * 60 * GEAR_RATIO / 2 / math.pi
     for data in log.data:
         found = True
         if data.entryId == vId:
-            lastV = data.value
-            lastVTime = data.timestamp
+            prevV, prevVTime = lastV, lastVTime
+            lastV, lastVTime = data.value, data.timestamp
         elif data.entryId == aId:
-            lastA = data.value
-            lastATime = data.timestamp
+            lastA, lastATime = data.value, data.timestamp
         elif data.entryId == voltId:
-            lastVolt = data.value
-            lastVoltTime = data.timestamp
+            lastVolt, lastVoltTime = data.value, data.timestamp
         else:
             found = False
-        if found and abs(lastVTime - lastATime) < 10 and abs(lastVTime - lastVoltTime) < 10 and 1 < abs(lastVolt) < 9:
-            n = n + 1
-            volts.append(lastVolt)
-            dataArray.append((1 if lastV > 0 else -1, lastV, lastA))
-            prevV = lastV
-            print(f'{lastVoltTime} volt={lastVolt} v={lastV} a={lastA}')
+        if (found and
+                abs(lastVTime - lastATime) < 10 and
+                abs(lastVTime - lastVoltTime) < 10 and
+                1 < abs(lastVolt) < 9 and
+                (lastVTime - prevVTime) < 50):
+            a = (lastV - prevV)*1000/(lastVTime - prevVTime)
+            if not CALCULATE_ACCELERATION or (abs(a - lastA) < MAX_CALCULATED_A_DIFF and abs(a) < MAX_A):
+                n = n + 1
+                if CALCULATE_THEORETICAL_KV:
+                    volts.append(lastVolt - lastV * kv)
+                    dataArray.append((1 if lastV > 0 else -1, a if CALCULATE_ACCELERATION else lastA))
+                else:
+                    volts.append(lastVolt)
+                    dataArray.append((1 if lastV > 0 else -1, lastV, a if CALCULATE_ACCELERATION else lastA))
+                if PRINT_DATA:
+                    print(f'{lastVoltTime} volt={lastVolt} v={lastV} a={lastA} / {a} prevV={prevV} / {prevVTime}')
     if n < 10:
         print(f'got only {n} lines for {name}')
         return
@@ -191,8 +212,12 @@ def analyzeData(vId, aId, voltId, name):
     E2 = numpy.average(EE)
     print(f'Data analyzed for {name} max abs error {E1} average abs error {E2} - based on {n} lines')
     print(f'KS = {R[0]}')
-    print(f'KV = {R[1]}')
-    print(f'KA = {R[2]}')
+    if CALCULATE_THEORETICAL_KV:
+        print(f'KV = {kv}')
+        print(f'KA = {R[1]}')
+    else:
+        print(f'KV = {R[1]} / {kv}')
+        print(f'KA = {R[2]}')
 
 
 if __name__ == '__main__':
