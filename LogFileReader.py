@@ -6,28 +6,29 @@ from tkinter import filedialog
 
 import numpy
 
-class dataRecord:
+
+class DataRecord:
     def __init__(self, entryId: int, value: float, timestamp: int):
         self.entryId = entryId
         self.timestamp = timestamp
         self.value = value
 
-class entryDescription:
+
+class EntryDescription:
     def __init__(self, entryId: int, name: str, entryType: str, meta: str):
         self.entryId = entryId
         self.name = name
         self.entryType = entryType
         self.meta = meta
 
-class LogFileReader:
 
-    type
+class LogFileReader:
 
     def __init__(self, fileName:str):
         self.file = open(fileName,'rb')
         self.fileName = fileName
-        self.entriesDefinition: dict[int, entryDescription] = {}
-        self.data: typing.List[dataRecord] = []
+        self.entriesDefinition: dict[int, EntryDescription] = {}
+        self.data: typing.List[DataRecord] = []
         if not self.readHeader():
             self.file.close()
             self.file = None
@@ -46,7 +47,7 @@ class LogFileReader:
                 else:
                     doubleValue = self.readData(recordId, payloadLength)
                     if doubleValue:
-                        self.data.append(dataRecord(recordId,doubleValue,timestamp))
+                        self.data.append(DataRecord(recordId, doubleValue, timestamp))
         finally:
             self.file.close()
             self.file = None
@@ -86,7 +87,7 @@ class LogFileReader:
             entryType = self.readStr(typeLength)
             metaLength = self.readInt(4)
             meta = self.readStr(metaLength)
-            self.entriesDefinition[entryId] = entryDescription(entryId, name, entryType, meta)
+            self.entriesDefinition[entryId] = EntryDescription(entryId, name, entryType, meta)
         elif recordType == 1:   # end
             entryId = self.readInt(4)
             del self.entriesDefinition[entryId]
