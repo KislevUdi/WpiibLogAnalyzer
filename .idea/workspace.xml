@@ -4,7 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e7b07eca-4318-4d23-a2f8-954fb079934c" name="Changes" comment="" />
+    <list default="true" id="e7b07eca-4318-4d23-a2f8-954fb079934c" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/LogFileReader.py" beforeDir="false" afterPath="$PROJECT_DIR$/LogFileReader.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -90,7 +93,23 @@
       <option name="project" value="LOCAL" />
       <updated>1736802507867</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Initial Log Analyzer for simple motor">
+      <option name="closed" value="true" />
+      <created>1736802868114</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1736802868114</updated>
+    </task>
+    <task id="LOCAL-00003" summary="sort groups">
+      <option name="closed" value="true" />
+      <created>1736803140194</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1736803140194</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -106,6 +125,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial Log Analyzer for simple motor" />
-    <option name="LAST_COMMIT_MESSAGE" value="Initial Log Analyzer for simple motor" />
+    <MESSAGE value="sort groups" />
+    <option name="LAST_COMMIT_MESSAGE" value="sort groups" />
   </component>
 </project>
