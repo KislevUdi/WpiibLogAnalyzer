@@ -135,6 +135,17 @@ def analyzeSelectedGroups():
         voltId = log.getEntryId(s + '/Voltage')
         analyzeData(vId, aId, voltId, s)
 
+def printSelectedGroups():
+    selected_items = [listBox.get(i) for i in listBox.curselection()]
+    items = ('/Voltage','/Velocity', '/Position', 'Acceleration')
+    for s in selected_items:
+        entriesId = []
+        for t in items:
+            entriesId.append(log.getEntryId(s + t))
+        for record in log.data:
+            if record.entryId in entriesId:
+                print(f'{log.entriesDefinition[record.entryId].name} at {record.timestamp/1000} - {record.value}')
+
 
 def analyzeData(vId, aId, voltId, name):
     lastV = 0
@@ -190,8 +201,10 @@ if __name__ == '__main__':
     listBox = tk.Listbox(root, selectmode=tk.MULTIPLE, width=200, height=300)
     button = tk.Button(root, text='Analyze', command=analyzeSelectedGroups)
     bEnd = tk.Button(root, text='Exit', command=lambda: quit(0))
+    printButton = tk.Button(root, text='Print', command=printSelectedGroups)
     button.pack()
     bEnd.pack()
+    printButton.pack()
 
     filename = select_file()
 
