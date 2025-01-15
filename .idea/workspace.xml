@@ -125,7 +125,15 @@
       <option name="project" value="LOCAL" />
       <updated>1736894881379</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Changed data to be a double linked list per type of data&#10;use next cycle accleration - due to heavy filtering&#10;option to use average of next cycle accleration with calculated acc based on velocity change&#10;option to use theoretical KV - based on motor data and gear ratio&#10;For multiple motor selections - add the avg of KS, KV, KA">
+      <option name="closed" value="true" />
+      <created>1736941231033</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1736941231033</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -144,6 +152,7 @@
     <MESSAGE value="sort groups" />
     <MESSAGE value="changed to use classes for record data and entry descriptions&#10;added check __name__ for main&#10;use dict/list types" />
     <MESSAGE value="Options (in code) for calculation acceleration based on previous and current velocity and time&#10;Option to calculate KV based on motor and gear ratio&#10;Option to limit acceleration and diff from calculated to reported&#10;Option to print the data used for calculation" />
-    <option name="LAST_COMMIT_MESSAGE" value="Options (in code) for calculation acceleration based on previous and current velocity and time&#10;Option to calculate KV based on motor and gear ratio&#10;Option to limit acceleration and diff from calculated to reported&#10;Option to print the data used for calculation" />
+    <MESSAGE value="Changed data to be a double linked list per type of data&#10;use next cycle accleration - due to heavy filtering&#10;option to use average of next cycle accleration with calculated acc based on velocity change&#10;option to use theoretical KV - based on motor data and gear ratio&#10;For multiple motor selections - add the avg of KS, KV, KA" />
+    <option name="LAST_COMMIT_MESSAGE" value="Changed data to be a double linked list per type of data&#10;use next cycle accleration - due to heavy filtering&#10;option to use average of next cycle accleration with calculated acc based on velocity change&#10;option to use theoretical KV - based on motor data and gear ratio&#10;For multiple motor selections - add the avg of KS, KV, KA" />
   </component>
 </project>

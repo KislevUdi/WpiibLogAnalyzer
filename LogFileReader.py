@@ -193,6 +193,48 @@ def analyzeSelectedGroups():
         print(f'avg KA={k[2]:7.5f}')
 
 
+def plotSelectedGroups():
+    selected_items = [listBox.get(i) for i in listBox.curselection()]
+    for s in selected_items:
+        entries = [log.getEntryDefinition(s + '/Velocity'),
+                   log.getEntryDefinition(s + '/Acceleration'),
+                   log.getEntryDefinition(s + '/Voltage'),
+                   log.getEntryDefinition(s + '/Position')]
+        if None not in entries:
+            times = []
+            values = []
+            firstTime = 0
+            lastTime = 0
+            data = [x.firstData for x in entries]
+            while data[0].next:
+                maxTime = max((r.timestamp for r in data))
+                for i, r in enumerate(data):
+                    data[i] = data[i].getToTime(maxTime)
+                    if not data[i]:
+                        break
+                if data[2].value != 0:
+                    if firstTime == 0:
+                        firstTime = data[0].timestamp
+                    else:
+                        lastTime = (data[0].timestamp - firstTime) / 1000
+                    times.append(lastTime)
+                    values.append((data[0].value, data[1].value, data[2].value, math.degrees(data[3].value)))
+                data[0] = data[0].next
+            import matplotlib.pyplot as plt
+            import matplotlib.ticker
+            fig, ax = plt.subplots()
+            ax.plot(times, values)
+            ax.set_title(s)
+            ax.set_xlabel("Time")
+            ax.legend(('Vel','Acc','Volt','Pos'))
+            ax.minorticks_on()
+            ax.xaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator(10))
+            ax.grid(visible=True, which='major', color='b', linestyle='-', axis='x')
+            ax.grid(visible=True, which='minor', color='r', linestyle='--', axis='x')
+            ax.grid(visible=True, which='major', color='g', linestyle='-', axis='y')
+            plt.show()
+
+
 
 def printSelectedGroups():
     selected_items = [listBox.get(i) for i in listBox.curselection()]
@@ -208,7 +250,7 @@ def printSelectedGroups():
                 print(f'Can not find data {name}')
                 quit()
             record = entry.firstData
-            if t == 0:
+            if time == 0:
                 time = record.timestamp
             else:
                 record.getToTime(time)
@@ -309,6 +351,7 @@ if __name__ == '__main__':
     analyzeB = tk.Button(root, text='Analyze', command=analyzeSelectedGroups)
     endB = tk.Button(root, text='Exit', command=lambda: quit(0))
     printB = tk.Button(root, text='Print', command=printSelectedGroups)
+    plotB = tk.Button(root, text='Plot', command=plotSelectedGroups)
     kvVar = tk.IntVar()
     kvVar.set(1 if CALCULATE_THEORETICAL_KV else 0)
     kvCheck = tk.Checkbutton(root, text="Use Theoretical KV", variable=kvVar, onvalue=1, offvalue=0, command=setKv)
@@ -325,6 +368,7 @@ if __name__ == '__main__':
     analyzeB.pack()
     endB.pack()
     printB.pack()
+    plotB.pack()
 
     filename = select_file()
     log = LogFileReader(filename)
