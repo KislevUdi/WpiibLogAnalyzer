@@ -1,5 +1,6 @@
 from __future__ import annotations
 import math
+import os.path
 import struct
 import typing
 from typing import Optional
@@ -71,7 +72,7 @@ class LogFileReader:
         if not self.readHeader():
             self.file.close()
             self.file = None
-            print(f'{fileName} is not a valid WPILOG file')
+            msg(f'{fileName} is not a valid WPILOG file')
         else:
             self.readAll()
 
@@ -94,7 +95,7 @@ class LogFileReader:
         finally:
             self.file.close()
             self.file = None
-            print(f' read {numRead} lines')
+            msg(f' read {numRead} lines')
 
     def readInt(self, n):
         return int.from_bytes(self.file.read(n), byteorder='little')
@@ -173,12 +174,31 @@ class LogFileReader:
 
 
 def select_file():
-    return filedialog.askopenfilename(initialdir='./')
+    global fileName, log, listBox, fileText
+    dir = os.path.dirname(fileName)
+    if not dir :
+        fileName = filedialog.askopenfilename(initialdir='./')
+    else:
+        fileName = filedialog.askopenfilename(initialdir=dir)
+    if fileName:
+        log = LogFileReader(fileName)
+        s = log.getGroups()
+        s = list(s)
+        s.sort()
+        listBox.delete(0,tk.END)
+        for e in s:
+            listBox.insert(tk.END,e)
+        listBox.place(x=50, y=30)
+        fileText.configure(state=tk.NORMAL)
+        fileText.delete(0,tk.END)
+        fileText.insert(0,fileName)
+        fileText.configure(state=tk.DISABLED)
+
 
 
 def analyzeSelectedGroups():
     selected_items = [listBox.get(i) for i in listBox.curselection()]
-    print(selected_items)
+    msg(str(selected_items))
     k = []
     for s in selected_items:
         vData = log.getEntryDefinition(s + '/Velocity')
@@ -188,9 +208,9 @@ def analyzeSelectedGroups():
     l = len(selected_items)
     if l > 1:
         k = np.average(k, axis=0)
-        print(f'avg KS={k[0]:5.3f}')
-        print(f'avg KV={k[1]:5.3f}')
-        print(f'avg KA={k[2]:7.5f}')
+        msg(f'avg KS={k[0]:5.3f}')
+        msg(f'avg KV={k[1]:5.3f}')
+        msg(f'avg KA={k[2]:7.5f}')
 
 
 def plotSelectedGroups():
@@ -218,7 +238,7 @@ def plotSelectedGroups():
                     else:
                         lastTime = (data[0].timestamp - firstTime) / 1000
                     times.append(lastTime)
-                    values.append((data[0].value, data[1].value, data[2].value, math.degrees(data[3].value)))
+                    values.append((data[0].value*2, data[1].value, data[2].value*12.5, math.degrees(data[3].value)))
                 data[0] = data[0].next
             import matplotlib.pyplot as plt
             import matplotlib.ticker
@@ -226,7 +246,7 @@ def plotSelectedGroups():
             ax.plot(times, values)
             ax.set_title(s)
             ax.set_xlabel("Time")
-            ax.legend(('Vel','Acc','Volt','Pos'))
+            ax.legend(('Vel(rad*2)','Acc(rad)','Volt(%)','Pos(deg'))
             ax.minorticks_on()
             ax.xaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator(10))
             ax.grid(visible=True, which='major', color='b', linestyle='-', axis='x')
@@ -247,7 +267,7 @@ def printSelectedGroups():
             name = s + '/' + t
             entry = log.getEntryDefinition(name)
             if not entry:
-                print(f'Can not find data {name}')
+                msg(f'Can not find data {name}')
                 quit()
             record = entry.firstData
             if time == 0:
@@ -255,6 +275,7 @@ def printSelectedGroups():
             else:
                 record.getToTime(time)
             data.append(record)
+        msg('   Time  ,   Voltage , Velocity , Position ,  Acceleration')
         while data[0].next:
             maxTime = max((r.timestamp for r in data))
             str = f'{maxTime/1000:8.4f}'
@@ -267,7 +288,7 @@ def printSelectedGroups():
                 else:
                     str += f'   {items[i]: >10}:{data[i].value:10.4f}'
             if data[0].value != 0:
-                print(str)
+                msg(str)
             data[0] = data[0].next
 
 def analyzeData(vId, aId, voltId, name):
@@ -299,14 +320,14 @@ def analyzeData(vId, aId, voltId, name):
                     volts.append(vol.value)
                     dataArray.append((1 if vel.value > 0 else -1, vel.value, a if CALCULATE_ACCELERATION else acc.value))
                 if PRINT_DATA:
-                    print(f'{vol.timestamp/1000:8.3f} '
+                    msg(f'{vol.timestamp/1000:8.3f} '
                           f'volt={vol.value:5.2f} '
                           f'v={vel.value:6.2f} '
                           f'a={acc.value:7.2f} / {a:7.2f} '
                           f'prevV={vel.prev.value:6.2f} / {vel.prev.timestamp/1000:8.3f}')
         data[0] = data[0].next
     if n < 10:
-        print(f'got only {n} lines for {name}')
+        msg(f'got only {n} lines for {name}')
         return
     V = numpy.array(volts)
     B = numpy.array(dataArray)
@@ -316,69 +337,89 @@ def analyzeData(vId, aId, voltId, name):
     EE = numpy.abs(E)
     E1 = numpy.max(EE)
     E2 = numpy.average(EE)
-    print(f'Data analyzed for {name} max abs error {E1} average abs error {E2} - based on {n} lines')
-    print(f'KS = {R[0]}')
+    msg(f'Data analyzed for {name} max abs error {E1} average abs error {E2} - based on {n} lines')
+    msg(f'KS = {R[0]}')
     if CALCULATE_THEORETICAL_KV:
-        print(f'KV = {kv}')
-        print(f'KA = {R[1]}')
+        msg(f'KV = {kv}')
+        msg(f'KA = {R[1]}')
         return (R[0], kv, R[1])
     else:
-        print(f'KV = {R[1]} / {kv}')
-        print(f'KA = {R[2]}')
+        msg(f'KV = {R[1]} / {kv}')
+        msg(f'KA = {R[2]}')
         return (R[0], R[1], R[2])
 
 
 def setKv():
     global CALCULATE_THEORETICAL_KV
     CALCULATE_THEORETICAL_KV = kvVar.get() == 1
-    print(f'CALCULATE_THEORETICAL_KV = {CALCULATE_THEORETICAL_KV}')
+    msg(f'CALCULATE_THEORETICAL_KV = {CALCULATE_THEORETICAL_KV}')
 
 def setPrint():
     global PRINT_DATA
     PRINT_DATA = printVar.get() == 1
-    print(f'PRINT_DATA = {PRINT_DATA}')
+    msg(f'PRINT_DATA = {PRINT_DATA}')
 
 def setCalcAccelration():
     global CALCULATE_ACCELERATION
     CALCULATE_ACCELERATION = calcAccVar.get() == 1
-    print(f'CALCULATE_ACCELERATION = {CALCULATE_ACCELERATION}')
+    msg(f'CALCULATE_ACCELERATION = {CALCULATE_ACCELERATION}')
+
+def msg(msg:str):
+    resultText.configure(state=tk.NORMAL)
+    resultText.insert(tk.END,'\n' + msg)
+    resultText.configure(state=tk.DISABLED)
 
 if __name__ == '__main__':
     rootWindow = tk.Tk()
-    root = tk.Frame(master=rootWindow, width=500, height=500)
-    root.pack()
-    listBox = tk.Listbox(root, selectmode=tk.MULTIPLE, width=200, height=300)
-    analyzeB = tk.Button(root, text='Analyze', command=analyzeSelectedGroups)
-    endB = tk.Button(root, text='Exit', command=lambda: quit(0))
-    printB = tk.Button(root, text='Print', command=printSelectedGroups)
-    plotB = tk.Button(root, text='Plot', command=plotSelectedGroups)
+    rootWindow.geometry('1500x600')
+    fileName = ''
+    buttonFrame = tk.Frame(master=rootWindow, width=10, height=50)
+    listFrame = tk.Frame(master=rootWindow, width=10, height=50)
+    resultFrame = tk.Frame(master=rootWindow, width=10, height=50)
+    buttonFrame.pack(padx=10, pady=10, side=tk.LEFT, fill=tk.NONE, expand=False)
+    listFrame.pack(padx=10, pady=10, side=tk.LEFT, fill=tk.NONE, expand=False)
+    resultFrame.pack(padx=10, pady=10, side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+    fileB = tk.Button(buttonFrame, text='Select File', command=select_file)
+    fileText = tk.Entry(buttonFrame, state=tk.DISABLED, width=50)
+
+    listBox = tk.Listbox(listFrame, selectmode=tk.MULTIPLE, width=40, height=100)
+
+    analyzeB = tk.Button(buttonFrame, text='Analyze', command=analyzeSelectedGroups)
+    endB = tk.Button(buttonFrame, text='Exit', command=lambda: quit(0))
+    printB = tk.Button(buttonFrame, text='Print', command=printSelectedGroups)
+    plotB = tk.Button(buttonFrame, text='Plot', command=plotSelectedGroups)
     kvVar = tk.IntVar()
     kvVar.set(1 if CALCULATE_THEORETICAL_KV else 0)
-    kvCheck = tk.Checkbutton(root, text="Use Theoretical KV", variable=kvVar, onvalue=1, offvalue=0, command=setKv)
-    kvCheck.pack()
+    kvCheck = tk.Checkbutton(buttonFrame, text="Use Theoretical KV", variable=kvVar, onvalue=1, offvalue=0, command=setKv)
     printVar = tk.IntVar()
     printVar.set(1 if PRINT_DATA else 0)
-    printCheck = tk.Checkbutton(root,text="Print", variable=printVar, onvalue=1, offvalue=0, command=setPrint)
-    printCheck.pack()
+    printCheck = tk.Checkbutton(buttonFrame,text="Print", variable=printVar, onvalue=1, offvalue=0, command=setPrint)
     calcAccVar = tk.IntVar()
     calcAccVar.set(1 if CALCULATE_ACCELERATION else 0)
-    calcAccCheck = tk.Checkbutton(root,text="Calculate our Acceleration",
+    calcAccCheck = tk.Checkbutton(buttonFrame,text="Calculate our Acceleration",
                                   variable=calcAccVar, onvalue=1, offvalue=0, command=setCalcAccelration)
-    calcAccCheck.pack()
-    analyzeB.pack()
-    endB.pack()
-    printB.pack()
-    plotB.pack()
 
-    filename = select_file()
-    log = LogFileReader(filename)
-    s = log.getGroups()
-    s = list(s)
-    s.sort()
-    for e in s:
-        listBox.insert(tk.END,e)
-    listBox.pack()
-    root.mainloop()
+    resultText = tk.Text(resultFrame)
+    resultText.configure(state=tk.DISABLED)
+    resultText.pack(padx=10, pady=10, side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scroll = tk.Scrollbar(resultFrame)
+    scroll.pack(side=tk.RIGHT, fill=tk.Y)
+    resultText.config(yscrollcommand=scroll.set)
+    scroll.config(command=resultText.yview)
+
+    fileB.pack( padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
+    fileText.pack( padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
+    listBox.pack( padx=10, pady=10, side=tk.LEFT, anchor=tk.NE, fill=tk.NONE, expand=False)
+    printCheck.pack(padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
+    kvCheck.pack(padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
+    calcAccCheck.pack(padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
+    analyzeB.pack(padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
+    endB.pack(padx=10, pady=10, side=tk.BOTTOM, anchor=tk.S, fill=tk.NONE, expand=False)
+    printB.pack(padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
+    plotB.pack(padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
+
+    rootWindow.mainloop()
 
 
 
