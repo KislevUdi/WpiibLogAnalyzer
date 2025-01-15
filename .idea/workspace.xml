@@ -117,7 +117,15 @@
       <option name="project" value="LOCAL" />
       <updated>1736863145281</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="Options (in code) for calculation acceleration based on previous and current velocity and time&#10;Option to calculate KV based on motor and gear ratio&#10;Option to limit acceleration and diff from calculated to reported&#10;Option to print the data used for calculation">
+      <option name="closed" value="true" />
+      <created>1736894881379</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1736894881379</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -135,6 +143,7 @@
     <MESSAGE value="Initial Log Analyzer for simple motor" />
     <MESSAGE value="sort groups" />
     <MESSAGE value="changed to use classes for record data and entry descriptions&#10;added check __name__ for main&#10;use dict/list types" />
-    <option name="LAST_COMMIT_MESSAGE" value="changed to use classes for record data and entry descriptions&#10;added check __name__ for main&#10;use dict/list types" />
+    <MESSAGE value="Options (in code) for calculation acceleration based on previous and current velocity and time&#10;Option to calculate KV based on motor and gear ratio&#10;Option to limit acceleration and diff from calculated to reported&#10;Option to print the data used for calculation" />
+    <option name="LAST_COMMIT_MESSAGE" value="Options (in code) for calculation acceleration based on previous and current velocity and time&#10;Option to calculate KV based on motor and gear ratio&#10;Option to limit acceleration and diff from calculated to reported&#10;Option to print the data used for calculation" />
   </component>
 </project>

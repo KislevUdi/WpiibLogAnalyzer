@@ -1,27 +1,39 @@
+from __future__ import annotations
 import math
 import struct
 import typing
+from typing import Optional
 
 import tkinter as tk
 from tkinter import filedialog
 
 import numpy
-
+import numpy as np
 
 CALCULATE_THEORETICAL_KV = False
 GEAR_RATIO = 150.0 / 7.0
 MOTOR_FREE_RPM = 6380   # use 6000 for Kraken
 MOTOR_MAX_VOLT = 12*(255/257)   # use 12*(344/366)
-CALCULATE_ACCELERATION = False
+CALCULATE_ACCELERATION = True
 MAX_A = 200
 MAX_CALCULATED_A_DIFF = 100
 PRINT_DATA = False
+PRINT_CSV = True
+
 
 class DataRecord:
-    def __init__(self, entryId: int, value: float, timestamp: int):
-        self.entryId = entryId
+    def __init__(self, entry: EntryDescription, value: float, timestamp: int):
+        self.entry = entry
         self.timestamp = timestamp
         self.value = value
+        self.next: Optional[DataRecord] = None
+        self.prev: Optional[DataRecord] = None
+
+    def getToTime(self, time):
+        ret = self
+        while ret.next and ret.next.timestamp < time + 15:
+            ret = ret.next
+        return ret
 
 
 class EntryDescription:
@@ -30,6 +42,24 @@ class EntryDescription:
         self.name = name
         self.entryType = entryType
         self.meta = meta
+        self.firstData:Optional[DataRecord] = None
+        self.lastData:Optional[DataRecord] = None
+        self.isDouble = entryType == 'double'
+        self.length = 0
+
+    def add(self, value:float, time:int):
+        if self.lastData:
+            record = DataRecord(self,value,time)
+            record.prev = self.lastData
+            self.lastData.next = record
+            self.lastData = record
+        else:
+            self.firstData = DataRecord(self,value,time)
+            self.lastData = self.firstData
+        self.length += 1
+
+    def dataLength(self):
+        return self.length
 
 
 class LogFileReader:
@@ -38,7 +68,6 @@ class LogFileReader:
         self.file = open(fileName,'rb')
         self.fileName = fileName
         self.entriesDefinition: dict[int, EntryDescription] = {}
-        self.data: typing.List[DataRecord] = []
         if not self.readHeader():
             self.file.close()
             self.file = None
@@ -47,6 +76,7 @@ class LogFileReader:
             self.readAll()
 
     def readAll(self):
+        numRead = 0
         try:
             timestamp = 1
             payloadLength = 1
@@ -55,18 +85,29 @@ class LogFileReader:
                 if recordId == 0:   # control
                     self.readControlRecord(payloadLength)
                 else:
-                    doubleValue = self.readData(recordId, payloadLength)
-                    if doubleValue:
-                        self.data.append(DataRecord(recordId, doubleValue, timestamp))
+                    desc = self.entriesDefinition[recordId]
+                    if desc.isDouble:
+                        desc.add(self.readDouble(payloadLength), timestamp)
+                        numRead += 1
+                    else:
+                        self.skip(payloadLength)
         finally:
             self.file.close()
             self.file = None
+            print(f' read {numRead} lines')
 
     def readInt(self, n):
         return int.from_bytes(self.file.read(n), byteorder='little')
 
     def readStr(self, n):
         return self.file.read(n).decode('utf-8')
+
+    def readDouble(self, length) -> float:
+        b = self.file.read(length)
+        return struct.unpack('d', b)[0]
+
+    def skip(self, length):
+        self.file.read(length)
 
     def readHeader(self) -> bool:
         s = self.readStr(6)
@@ -109,15 +150,6 @@ class LogFileReader:
             if entry:
                 entry.meta = meta
 
-    def readData(self, entryId, length) -> float | None:
-        b = self.file.read(length)
-        t = self.entriesDefinition[entryId].entryType
-        if t == 'double':
-            d = struct.unpack('d', b)[0]
-            return d
-        else:
-            return None
-
     def getGroups(self) -> set:
         res = set()
         for entryDesc in self.entriesDefinition.values():
@@ -127,10 +159,16 @@ class LogFileReader:
                 res.add(entryName[0:i])
         return res
 
-    def getEntryId(self, name):
+    def getEntryDefinition(self, name):
         for entryDesc in self.entriesDefinition.values():
             if entryDesc.name == name:
-                return entryDesc.entryId
+                return entryDesc
+        return None
+
+    def getEntryId(self, name):
+        desc = self.getEntryDefinition(name)
+        if desc:
+            return desc.entryId
         return -1
 
 
@@ -140,65 +178,91 @@ def select_file():
 
 def analyzeSelectedGroups():
     selected_items = [listBox.get(i) for i in listBox.curselection()]
+    print(selected_items)
+    k = []
     for s in selected_items:
-        vId = log.getEntryId(s + '/Velocity')
-        aId = log.getEntryId(s + '/Acceleration')
-        voltId = log.getEntryId(s + '/Voltage')
-        analyzeData(vId, aId, voltId, s)
+        vData = log.getEntryDefinition(s + '/Velocity')
+        aData = log.getEntryDefinition(s + '/Acceleration')
+        voltData = log.getEntryDefinition(s + '/Voltage')
+        k.append(analyzeData(vData, aData, voltData, s))
+    l = len(selected_items)
+    if l > 1:
+        k = np.average(k, axis=0)
+        print(f'avg KS={k[0]:5.3f}')
+        print(f'avg KV={k[1]:5.3f}')
+        print(f'avg KA={k[2]:7.5f}')
+
 
 
 def printSelectedGroups():
     selected_items = [listBox.get(i) for i in listBox.curselection()]
-    items = ('/Voltage','/Velocity', '/Position', 'Acceleration')
+    items = ('Voltage', 'Velocity', 'Position', 'Acceleration')
     for s in selected_items:
-        entriesId = []
+        data = []
+        master = None
+        time = 0
         for t in items:
-            entriesId.append(log.getEntryId(s + t))
-        for record in log.data:
-            if record.entryId in entriesId:
-                print(f'{log.entriesDefinition[record.entryId].name} at {record.timestamp/1000} - {record.value}')
-
+            name = s + '/' + t
+            entry = log.getEntryDefinition(name)
+            if not entry:
+                print(f'Can not find data {name}')
+                quit()
+            record = entry.firstData
+            if t == 0:
+                time = record.timestamp
+            else:
+                record.getToTime(time)
+            data.append(record)
+        while data[0].next:
+            maxTime = max((r.timestamp for r in data))
+            str = f'{maxTime/1000:8.4f}'
+            for i, r in enumerate(data):
+                data[i] = data[i].getToTime(maxTime)
+                if not data[i]:
+                    break
+                if PRINT_CSV:
+                    str += f', {data[i].value:10.4f}'
+                else:
+                    str += f'   {items[i]: >10}:{data[i].value:10.4f}'
+            if data[0].value != 0:
+                print(str)
+            data[0] = data[0].next
 
 def analyzeData(vId, aId, voltId, name):
-    lastV = 0
-    lastA = 0
-    lastVolt = 0
-    lastVTime = 0
-    lastATime = 0
-    lastVoltTime = 0
-    prevV = 0
-    prevVTime = 0
     n = 0
     volts = list()
     dataArray = list()
-    kv = 11.85 / MOTOR_FREE_RPM * 60 * GEAR_RATIO / 2 / math.pi
-    for data in log.data:
-        found = True
-        if data.entryId == vId:
-            prevV, prevVTime = lastV, lastVTime
-            lastV, lastVTime = data.value, data.timestamp
-        elif data.entryId == aId:
-            lastA, lastATime = data.value, data.timestamp
-        elif data.entryId == voltId:
-            lastVolt, lastVoltTime = data.value, data.timestamp
-        else:
-            found = False
-        if (found and
-                abs(lastVTime - lastATime) < 10 and
-                abs(lastVTime - lastVoltTime) < 10 and
-                1 < abs(lastVolt) < 9 and
-                (lastVTime - prevVTime) < 50):
-            a = (lastV - prevV)*1000/(lastVTime - prevVTime)
-            if not CALCULATE_ACCELERATION or (abs(a - lastA) < MAX_CALCULATED_A_DIFF and abs(a) < MAX_A):
+    data:typing.List[DataRecord] = [vId.firstData.next, aId.firstData.next, voltId.firstData.next]
+    kv = MOTOR_MAX_VOLT / MOTOR_FREE_RPM * 60 * GEAR_RATIO / 2 / math.pi
+    while data[0].next:
+        maxTime = max((r.timestamp for r in data))
+        for i, r in enumerate(data):
+            data[i] = data[i].getToTime(maxTime)
+            if not data[i]:
+                break
+        if 1 < abs(data[2].value) < 9:   # valid volts
+            vel = data[0]
+            acc = data[1].next
+            if not acc:
+                break
+            vol = data[2]
+            a = (vel.value - vel.prev.value)*1000/(vel.timestamp - vel.prev.timestamp)
+            a = (acc.value + a) / 2
+            if not CALCULATE_ACCELERATION or (abs(a - acc.value) < MAX_CALCULATED_A_DIFF and abs(a) < MAX_A):
                 n = n + 1
                 if CALCULATE_THEORETICAL_KV:
-                    volts.append(lastVolt - lastV * kv)
-                    dataArray.append((1 if lastV > 0 else -1, a if CALCULATE_ACCELERATION else lastA))
+                    volts.append(vol.value - vel.value * kv)
+                    dataArray.append((1 if vel.value > 0 else -1, a if CALCULATE_ACCELERATION else acc.value))
                 else:
-                    volts.append(lastVolt)
-                    dataArray.append((1 if lastV > 0 else -1, lastV, a if CALCULATE_ACCELERATION else lastA))
+                    volts.append(vol.value)
+                    dataArray.append((1 if vel.value > 0 else -1, vel.value, a if CALCULATE_ACCELERATION else acc.value))
                 if PRINT_DATA:
-                    print(f'{lastVoltTime} volt={lastVolt} v={lastV} a={lastA} / {a} prevV={prevV} / {prevVTime}')
+                    print(f'{vol.timestamp/1000:8.3f} '
+                          f'volt={vol.value:5.2f} '
+                          f'v={vel.value:6.2f} '
+                          f'a={acc.value:7.2f} / {a:7.2f} '
+                          f'prevV={vel.prev.value:6.2f} / {vel.prev.timestamp/1000:8.3f}')
+        data[0] = data[0].next
     if n < 10:
         print(f'got only {n} lines for {name}')
         return
@@ -215,27 +279,55 @@ def analyzeData(vId, aId, voltId, name):
     if CALCULATE_THEORETICAL_KV:
         print(f'KV = {kv}')
         print(f'KA = {R[1]}')
+        return (R[0], kv, R[1])
     else:
         print(f'KV = {R[1]} / {kv}')
         print(f'KA = {R[2]}')
+        return (R[0], R[1], R[2])
 
+
+def setKv():
+    global CALCULATE_THEORETICAL_KV
+    CALCULATE_THEORETICAL_KV = kvVar.get() == 1
+    print(f'CALCULATE_THEORETICAL_KV = {CALCULATE_THEORETICAL_KV}')
+
+def setPrint():
+    global PRINT_DATA
+    PRINT_DATA = printVar.get() == 1
+    print(f'PRINT_DATA = {PRINT_DATA}')
+
+def setCalcAccelration():
+    global CALCULATE_ACCELERATION
+    CALCULATE_ACCELERATION = calcAccVar.get() == 1
+    print(f'CALCULATE_ACCELERATION = {CALCULATE_ACCELERATION}')
 
 if __name__ == '__main__':
     rootWindow = tk.Tk()
     root = tk.Frame(master=rootWindow, width=500, height=500)
     root.pack()
     listBox = tk.Listbox(root, selectmode=tk.MULTIPLE, width=200, height=300)
-    button = tk.Button(root, text='Analyze', command=analyzeSelectedGroups)
-    bEnd = tk.Button(root, text='Exit', command=lambda: quit(0))
-    printButton = tk.Button(root, text='Print', command=printSelectedGroups)
-    button.pack()
-    bEnd.pack()
-    printButton.pack()
+    analyzeB = tk.Button(root, text='Analyze', command=analyzeSelectedGroups)
+    endB = tk.Button(root, text='Exit', command=lambda: quit(0))
+    printB = tk.Button(root, text='Print', command=printSelectedGroups)
+    kvVar = tk.IntVar()
+    kvVar.set(1 if CALCULATE_THEORETICAL_KV else 0)
+    kvCheck = tk.Checkbutton(root, text="Use Theoretical KV", variable=kvVar, onvalue=1, offvalue=0, command=setKv)
+    kvCheck.pack()
+    printVar = tk.IntVar()
+    printVar.set(1 if PRINT_DATA else 0)
+    printCheck = tk.Checkbutton(root,text="Print", variable=printVar, onvalue=1, offvalue=0, command=setPrint)
+    printCheck.pack()
+    calcAccVar = tk.IntVar()
+    calcAccVar.set(1 if CALCULATE_ACCELERATION else 0)
+    calcAccCheck = tk.Checkbutton(root,text="Calculate our Acceleration",
+                                  variable=calcAccVar, onvalue=1, offvalue=0, command=setCalcAccelration)
+    calcAccCheck.pack()
+    analyzeB.pack()
+    endB.pack()
+    printB.pack()
 
     filename = select_file()
-
     log = LogFileReader(filename)
-    print(f'log read - {len(log.data)}')
     s = log.getGroups()
     s = list(s)
     s.sort()
