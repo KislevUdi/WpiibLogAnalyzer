@@ -10,6 +10,8 @@ from tkinter import filedialog
 
 import numpy
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.ticker
 
 CALCULATE_THEORETICAL_KV = False
 GEAR_RATIO = 150.0 / 7.0
@@ -188,12 +190,11 @@ def select_file():
         listBox.delete(0,tk.END)
         for e in s:
             listBox.insert(tk.END,e)
-        listBox.place(x=50, y=30)
+        listBox.pack()
         fileText.configure(state=tk.NORMAL)
         fileText.delete(0,tk.END)
         fileText.insert(0,fileName)
         fileText.configure(state=tk.DISABLED)
-
 
 
 def analyzeSelectedGroups():
@@ -240,8 +241,6 @@ def plotSelectedGroups():
                     times.append(lastTime)
                     values.append((data[0].value*2, data[1].value, data[2].value*12.5, math.degrees(data[3].value)))
                 data[0] = data[0].next
-            import matplotlib.pyplot as plt
-            import matplotlib.ticker
             fig, ax = plt.subplots()
             ax.plot(times, values)
             ax.set_title(s)
@@ -253,7 +252,6 @@ def plotSelectedGroups():
             ax.grid(visible=True, which='minor', color='r', linestyle='--', axis='x')
             ax.grid(visible=True, which='major', color='g', linestyle='-', axis='y')
             plt.show()
-
 
 
 def printSelectedGroups():
@@ -291,6 +289,7 @@ def printSelectedGroups():
                 msg(str)
             data[0] = data[0].next
 
+
 def analyzeData(vId, aId, voltId, name):
     n = 0
     volts = list()
@@ -318,13 +317,14 @@ def analyzeData(vId, aId, voltId, name):
                     dataArray.append((1 if vel.value > 0 else -1, a if CALCULATE_ACCELERATION else acc.value))
                 else:
                     volts.append(vol.value)
-                    dataArray.append((1 if vel.value > 0 else -1, vel.value, a if CALCULATE_ACCELERATION else acc.value))
+                    dataArray.append((1 if vel.value > 0 else -1,
+                                      vel.value, a if CALCULATE_ACCELERATION else acc.value))
                 if PRINT_DATA:
                     msg(f'{vol.timestamp/1000:8.3f} '
-                          f'volt={vol.value:5.2f} '
-                          f'v={vel.value:6.2f} '
-                          f'a={acc.value:7.2f} / {a:7.2f} '
-                          f'prevV={vel.prev.value:6.2f} / {vel.prev.timestamp/1000:8.3f}')
+                        f'volt={vol.value:5.2f} '
+                        f'v={vel.value:6.2f} '
+                        f'a={acc.value:7.2f} / {a:7.2f} '
+                        f'prevV={vel.prev.value:6.2f} / {vel.prev.timestamp/1000:8.3f}')
         data[0] = data[0].next
     if n < 10:
         msg(f'got only {n} lines for {name}')
@@ -354,20 +354,24 @@ def setKv():
     CALCULATE_THEORETICAL_KV = kvVar.get() == 1
     msg(f'CALCULATE_THEORETICAL_KV = {CALCULATE_THEORETICAL_KV}')
 
+
 def setPrint():
     global PRINT_DATA
     PRINT_DATA = printVar.get() == 1
     msg(f'PRINT_DATA = {PRINT_DATA}')
 
-def setCalcAccelration():
+
+def setCalcAcceleration():
     global CALCULATE_ACCELERATION
     CALCULATE_ACCELERATION = calcAccVar.get() == 1
     msg(f'CALCULATE_ACCELERATION = {CALCULATE_ACCELERATION}')
+
 
 def msg(msg:str):
     resultText.configure(state=tk.NORMAL)
     resultText.insert(tk.END,'\n' + msg)
     resultText.configure(state=tk.DISABLED)
+
 
 if __name__ == '__main__':
     rootWindow = tk.Tk()
@@ -391,14 +395,15 @@ if __name__ == '__main__':
     plotB = tk.Button(buttonFrame, text='Plot', command=plotSelectedGroups)
     kvVar = tk.IntVar()
     kvVar.set(1 if CALCULATE_THEORETICAL_KV else 0)
-    kvCheck = tk.Checkbutton(buttonFrame, text="Use Theoretical KV", variable=kvVar, onvalue=1, offvalue=0, command=setKv)
+    kvCheck = tk.Checkbutton(buttonFrame, text="Use Theoretical KV",
+                             variable=kvVar, onvalue=1, offvalue=0, command=setKv)
     printVar = tk.IntVar()
     printVar.set(1 if PRINT_DATA else 0)
     printCheck = tk.Checkbutton(buttonFrame,text="Print", variable=printVar, onvalue=1, offvalue=0, command=setPrint)
     calcAccVar = tk.IntVar()
     calcAccVar.set(1 if CALCULATE_ACCELERATION else 0)
-    calcAccCheck = tk.Checkbutton(buttonFrame,text="Calculate our Acceleration",
-                                  variable=calcAccVar, onvalue=1, offvalue=0, command=setCalcAccelration)
+    calcAccCheck = tk.Checkbutton(buttonFrame, text="Calculate our Acceleration",
+                                  variable=calcAccVar, onvalue=1, offvalue=0, command=setCalcAcceleration)
 
     resultText = tk.Text(resultFrame)
     resultText.configure(state=tk.DISABLED)
@@ -408,9 +413,9 @@ if __name__ == '__main__':
     resultText.config(yscrollcommand=scroll.set)
     scroll.config(command=resultText.yview)
 
-    fileB.pack( padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
-    fileText.pack( padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
-    listBox.pack( padx=10, pady=10, side=tk.LEFT, anchor=tk.NE, fill=tk.NONE, expand=False)
+    fileB.pack(padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
+    fileText.pack(padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
+    listBox.pack(padx=10, pady=10, side=tk.LEFT, anchor=tk.NE, fill=tk.NONE, expand=False)
     printCheck.pack(padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
     kvCheck.pack(padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
     calcAccCheck.pack(padx=10, pady=10, side=tk.TOP, anchor=tk.NW, fill=tk.NONE, expand=False)
